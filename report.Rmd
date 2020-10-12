@@ -1,0 +1,53 @@
+---
+title: "Machine Learning for Exercise"
+author: "Yongxiao Zhou"
+date: "10/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+This report is explore the data set from the accelerometers belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The data is split into training and testing subsets. Since we are predicting the movement type based on many different quantitative factors, random forest method is used to train the data and build the model.
+
+## Data loading and package loading, remove NAs and variable that contains empty cells from data
+```{r load data}
+rawtraining <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"))
+rawtesting <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"))
+library(caret)
+library(ggplot2)
+library(lattice)
+library(gbm)
+library(forecast)
+library(AppliedPredictiveModeling)
+
+rawtraining[rawtraining == ""] <- NA
+training <- rawtraining[, colSums(is.na(rawtraining)) == 0]
+testing <- rawtesting[, colSums(is.na(rawtraining)) == 0]
+
+```
+
+## Random Tree Model Training and Testing
+Firstly, multi-core of CPU using is set to improve efficiency. Random trees is trained, and accuracy is tested within the training set first, then model is used to predict 20 test set.
+```{r linear model}
+library(doParallel)
+cl <- makeCluster(detectCores()[[1]])
+registerDoParallel(12)
+getDoParWorkers()
+mod_rf <- train(factor(classe)~., data = training[,c(-1:-7)], method = "rf", allowParallel = TRUE)
+result <- predict (mod_rf, training[,c(-1:-7,-60)])
+accu = function(values,prediction){sum(prediction == values)/length(values)}
+ac_rf <- accu(training$classe, result)
+ac_rf
+```
+It turns out that the accurary for training set validation is 100%. Now the Classe for the test set is predicted.
+
+```{r test}
+result <- predict (mod_rf, testing[,c(-1:-7,-60)])
+result
+```
+
+This result matches with the quiz results
